@@ -1,5 +1,6 @@
-import requests
+""import requests
 import streamlit as st
+from urllib.parse import urlparse
 
 # ---------------------------------------------------------
 # Entity Extraction Streamlit App using Dandelion API
@@ -25,6 +26,18 @@ if DANDELION_TOKEN == "YOUR_API_TOKEN_HERE" or not DANDELION_TOKEN.strip():
 # -- UI widgets
 text_input = st.text_area("Text to analyze", height=250)
 run_button = st.button("Extract entities")
+
+# -- Helper to normalize wikidata values (could be full URL or bare ID)
+def to_wikidata_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    # If it's already a full URL, return as‑is (replace http with https).
+    if value.startswith("http"):
+        parsed = urlparse(value)
+        # Ensure we have https scheme
+        return f"https://{parsed.netloc}{parsed.path}"
+    # Else assume it's an ID like "Q42".
+    return f"https://www.wikidata.org/wiki/{value}"
 
 # -- When user clicks the button
 if run_button:
@@ -63,19 +76,35 @@ if run_button:
 
                 # Locate Wikidata link inside the LOD block if present.
                 wikidata_url = None
-                lod_data = ann.get("lod", {})
-                if isinstance(lod_data, dict):
-                    wikidata_id = lod_data.get("wikidata")
-                    if wikidata_id:
-                        wikidata_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
+                lod_field = ann.get("lod", {})
+                # If lod is a dict (most common)
+                if isinstance(lod_field, dict):
+                    wikidata_url = to_wikidata_url(lod_field.get("wikidata"))
+                # If lod is a list (edge‑case API variant)
+                elif isinstance(lod_field, list):
+                    for lod_match in lod_field:
+                        if isinstance(lod_match, dict):
+                            wikidata_url = to_wikidata_url(lod_match.get("wikidata"))
+                            if wikidata_url:
+                                break
 
                 # Fallback: Dandelion returns a DBpedia URI by default.
                 if not wikidata_url:
                     wikidata_url = ann.get("uri")
 
+                # Get type(s) of entity if available
+                types = ann.get("types")
+                if isinstance(types, list):
+                    entity_type = ", ".join(types)
+                elif isinstance(types, str):
+                    entity_type = types
+                else:
+                    entity_type = "-"
+
                 rows.append(
                     {
                         "Entity": entity_label,
+                        "Type": entity_type,
                         "Confidence": round(confidence, 3),
                         "Wikidata / URI": wikidata_url,
                     }
