@@ -63,11 +63,11 @@ if run_button:
 
                 # Locate Wikidata link inside the LOD block if present.
                 wikidata_url = None
-                for lod_match in ann.get("lod", []):
-                    wikidata_id = lod_match.get("wikidata")
+                lod_data = ann.get("lod", {})
+                if isinstance(lod_data, dict):
+                    wikidata_id = lod_data.get("wikidata")
                     if wikidata_id:
                         wikidata_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
-                        break
 
                 # Fallback: Dandelion returns a DBpedia URI by default.
                 if not wikidata_url:
