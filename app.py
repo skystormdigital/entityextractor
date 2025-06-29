@@ -1,30 +1,26 @@
-import os
 import requests
 import streamlit as st
 
 # ---------------------------------------------------------
 # Entity Extraction Streamlit App using Dandelion API
 # ---------------------------------------------------------
-# Paste text → click a button → get back entities with direct
-# links to their Wikidata items (when available).
+# Paste text → click button → get entities with Wikidata links.
 # ---------------------------------------------------------
 # 1. Install deps:  pip install streamlit requests
-# 2. Put your Dandelion API token either
-#    • in an env‑var        ⇒  export DANDELION_TOKEN="<TOKEN>"
-#    • or in Streamlit secrets at .streamlit/secrets.toml
-#         [default]
-#         dandelion_token = "<TOKEN>"
+# 2. 🔑  Put your Dandelion API token below. **Never commit real secrets to public repos.**
 # 3. Run the app:   streamlit run streamlit_app.py
 # ---------------------------------------------------------
+
+# === Your API token (replace the placeholder string) ===
+DANDELION_TOKEN = "928aeec989914427a4a2c1ddc0f5edf1"
 
 st.set_page_config(page_title="Entity Extractor (Dandelion)", page_icon="🔍")
 st.title("🔍 Entity Extraction with Dandelion API")
 st.markdown("Paste some text below and I'll pull out the entities with direct links to Wikidata.")
 
-# -- Read API token
-TOKEN = st.secrets.get("dandelion_token") or os.getenv("DANDELION_TOKEN")
-if not TOKEN:
-    st.warning("Add your Dandelion API token to **.streamlit/secrets.toml** as `dandelion_token = \"<TOKEN>\"` or set the environment variable **DANDELION_TOKEN** before running.")
+if DANDELION_TOKEN == "YOUR_API_TOKEN_HERE" or not DANDELION_TOKEN.strip():
+    st.error("⚠️ Please set your Dandelion API token in the variable `DANDELION_TOKEN` inside *streamlit_app.py*.")
+    st.stop()
 
 # -- UI widgets
 text_input = st.text_area("Text to analyze", height=250)
@@ -32,9 +28,6 @@ run_button = st.button("Extract entities")
 
 # -- When user clicks the button
 if run_button:
-    if not TOKEN:
-        st.stop()  # token missing, already warned above
-
     if not text_input.strip():
         st.error("Please enter some text first.")
         st.stop()
@@ -42,10 +35,8 @@ if run_button:
     with st.spinner("Contacting Dandelion…"):
         params = {
             "text": text_input,
-            "token": TOKEN,
-            # "include" decides which extra data we want back.
-            # docs: https://dandelion.eu/docs/api/datatxt/nex/v1/
-            "include": "lod,types,abstract"  # lod carries Wikidata IDs
+            "token": DANDELION_TOKEN,
+            "include": "lod,types,abstract",  # lod carries Wikidata IDs
         }
         try:
             resp = requests.get(
